@@ -1,0 +1,43 @@
+name: Cleanup
+
+on:
+  workflow_run:
+    workflows: ["S3Uploader"]
+    types:
+      - completed
+
+jobs:
+  Cleanup:
+    runs-on: ubuntu-latest
+    env:
+        GH_ACCESS_TOKEN: ${{ secrets.GH_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+      - name: Configure Git for Cleanup
+        run: |
+          git config --global url.https://$GH_ACCESS_TOKEN@github.com/.insteadOf https://github.com/
+          git config --global user.email "github-actions[bot]@example.com"
+          git config --global user.name "GitHubActions [BOT]"
+      - name: Delete data directory 
+        run: |
+          if [ -d data ]; then
+            git checkout main
+            rm -rf data/*
+            git commit -am "Deleted data directory [Cleaning up for new upload]"
+            git push origin main
+          else
+            echo "Data directory does not exist"
+          fi
+      - name: Delete environment variable files
+        run: |
+          if [ -n "$(ls -A *.vars)" ]; then
+            git checkout main
+            rm -rf *.vars
+            git commit -am "Deleted environment variable files [Cleaning up for new upload]"
+            git push origin main
+          else
+            echo "No {env}.vars files found"
+          fi

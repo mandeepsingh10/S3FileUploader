@@ -1,0 +1,195 @@
+name: S3Uploader
+env:
+    RepoUploadPath: 'data/'
+on:
+  pull_request:
+    types:
+      - closed
+
+jobs:
+  CheckPrerequisites:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Check if .vars files exist
+        run: |
+          vars_files=$(ls -1 *.vars 2>/dev/null)
+          if [ -z "$vars_files" ]; then
+            echo "No .vars files found, job will fail"
+            exit 1  # Mark the job as failed
+          else
+            echo ".vars files found:"
+            echo "$vars_files"
+          fi
+        
+      - name: Check for duplicated S3 bucket names
+        run: |
+          bucket_names=()
+          duplicate_buckets=()
+
+          for env_file in *.vars; do
+            if [ -f "$env_file" ]; then
+              bucket_name=$(grep -oP '(?<=BucketName=).*' "$env_file")
+              if [[ " ${bucket_names[@]} " =~ " ${bucket_name} " ]]; then
+                duplicate_buckets+=("$bucket_name")
+              else
+                bucket_names+=("$bucket_name")
+              fi
+            fi
+          done
+
+          if [ ${#duplicate_buckets[@]} -gt 0 ]; then
+            echo "Duplicated S3 bucket names found in the following files:"
+            for dup_bucket in "${duplicate_buckets[@]}"; do
+              grep -l "BucketName=$dup_bucket" *.vars
+            done
+            exit 1
+          fi
+      - name: Check if data directory exists
+        run: |
+          if [ -d data ]; then
+            echo "Data directory exists"
+          else
+            echo "Data directory does not exist"
+            exit 1
+          fi
+
+  CheckEnv:
+    runs-on: ubuntu-latest
+    needs: CheckPrerequisites
+    outputs: 
+      DEV: ${{steps.check_dev.outputs.DEV}}
+      STAGE: ${{steps.check_staging.outputs.STAGE}}
+      SANDBOX: ${{steps.check_sandbox.outputs.SANDBOX}}
+      PROD: ${{steps.check_prod.outputs.PROD}}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Check if dev.vars file exists
+        id: check_dev
+        run: |
+          if [ -f dev.vars ]; then
+            echo "dev.vars exists"
+            DEV="True"
+            echo "DEV=$DEV" >> $GITHUB_OUTPUT
+          else
+            echo "dev.vars does not exist"
+          fi
+      - name: Check if staging.evars file exists
+        id: check_staging
+        run: |
+            if [ -f staging.evars ]; then
+              echo "staging.evars exists"
+              STAGE = "True"
+              echo "STAGE=$STAGE" >> $GITHUB_OUTPUT
+            else
+              echo "staging.evars does not exist"
+            fi   
+      - name: Check if sandbox.vars file exists
+        id: check_sandbox
+        run: |
+          if [ -f sandbox.vars ]; then
+            echo "sandbox.vars exists"
+            SANDBOX="True"
+            echo "SANDBOX=$SANDBOX" >> $GITHUB_OUTPUT
+          else
+            echo "sandbox.vars does not exist"
+          fi
+      - name: Check if prod.vars file exists
+        id: check_prod
+        run: |
+          if [ -f prod.vars ]; then
+            echo "prod.vars exists"
+            PROD="True"
+            echo "PROD=$PROD" >> $GITHUB_OUTPUT
+          else
+            echo "prod.vars does not exist"
+          fi
+        
+  DevUploader:
+    runs-on: ubuntu-latest
+    needs: CheckEnv
+    if: ${{ needs.CheckEnv.outputs.DEV == 'True' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Load environment variables for dev
+        run: |
+            source dev.vars
+            echo "DevS3BucketName=$DevBucketName" >> $GITHUB_ENV
+            echo "DevS3Path=$DevS3UploadLocation" >> $GITHUB_ENV
+        
+      - name: Upload files to ${{ env.DevS3BucketName }} at location ${{ env.DevS3Path }}
+        run: |
+          bash scripts/pipeline/prep.sh "${{ env.DevS3BucketName }}" "${{ env.DevS3Path }}" "${{ secrets.S3FILEUPLOADERBOT_AWS_AK }}" "${{ secrets.S3FILEUPLOADERBOT_AWS_SAK }}" "${{ env.RepoUploadPath }}"
+
+  StagingUploader:
+    runs-on: ubuntu-latest
+    needs: CheckEnv
+    if: ${{ needs.CheckEnv.outputs.STAGE == 'True' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Load environment variables for staging
+        run: |
+            source staging.vars
+            echo "StagingS3BucketName=$StagingBucketName" >> $GITHUB_ENV
+            echo "StagingS3Path=$StagingS3UploadLocation" >> $GITHUB_ENV
+
+      - name: Upload files to ${{ env.StagingS3BucketName }} at location ${{ env.StagingS3Path }}
+        run: |
+            bash scripts/pipeline/prep.sh "${{ env.StagingS3BucketName }}" "${{ env.StagingS3Path }}" "${{ secrets.CONTENTUPLOADER_AWS_AK }}" "${{ secrets.CONTENTUPLOADER_AWS_SAK }}" "${{ env.RepoUploadPath }}"
+
+  SandboxUploader:
+    runs-on: ubuntu-latest
+    needs: CheckEnv
+    if: ${{ needs.CheckEnv.outputs.SANDBOX == 'True' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0      
+
+      - name: Load environment variables for sandbox
+        run: |
+            source sandbox.vars
+            echo "SandboxS3BucketName=$SandboxBucketName" >> $GITHUB_ENV
+            echo "SandboxS3Path=$SandboxS3UploadLocation" >> $GITHUB_ENV
+
+      - name: Upload files to ${{ env.SandboxS3BucketName }} at location ${{ env.SandboxS3Path }}
+        run: |
+          bash scripts/pipeline/prep.sh "${{ env.SandboxS3BucketName }}" "${{ env.SandboxS3Path }}" "${{ secrets.CONTENTUPLOADER_AWS_AK }}" "${{ secrets.CONTENTUPLOADER_AWS_SAK }}" "${{ env.RepoUploadPath }}"
+
+  ProdUploader:
+    runs-on: ubuntu-latest
+    needs: CheckEnv
+    if: ${{ needs.CheckEnv.outputs.PROD == 'True' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Load environment variables for prod
+        run: |
+            source prod.vars
+            echo "ProdS3BucketName=$ProdBucketName" >> $GITHUB_ENV
+            echo "ProdS3Path=$ProdS3UploadLocation" >> $GITHUB_ENV
+
+      - name: Upload files to ${{ env.ProdS3BucketName }} at location ${{ env.ProdS3Path }}
+        run: |
+          bash scripts/pipeline/prep.sh "${{ env.ProdS3BucketName }}" "${{ env.ProdS3Path }}" "${{ secrets.CONTENTUPLOADER_AWS_AK }}" "${{ secrets.CONTENTUPLOADER_AWS_SAK }}" "${{ env.RepoUploadPath }}"
