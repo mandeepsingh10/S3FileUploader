@@ -1,0 +1,12 @@
+Here is a checklist outlining the necessary steps for the successful functioning of the project:
+
+AWS:
+
+1. Create an IAM user named "S3UploaderBot".
+2. Assign an inline policy to the IAM user that grants access to upload objects to the designated S3 bucket.
+3. Configure the bucket policy for the target bucket to enable S3UploaderBot to upload files into it.
+
+GitHub Actions - Secrets and Variables:
+
+1. Store the AWS Access Key and Secret Access Key of the automation user as repository secrets, using the names "S3FILEUPLOADERBOT_AWS_AK" and "S3FILEUPLOADERBOT_AWS_SAK" respectively.
+2. Generate a Personal Access Token (PAT) with read and write permissions for the GitHub Repository. Then, add this PAT token as a repository secret and label it as "GH_TOKEN".
