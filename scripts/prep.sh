@@ -8,4 +8,4 @@ local_path=$5
 pip3 install boto3
 
 # Run upload script
-python3 scripts/pipeline/S3Uploader.py $bucket_name $aws_key $aws_access_key $aws_access_secret $local_path
+python3 scripts/S3Uploader.py $bucket_name $aws_key $aws_access_key $aws_access_secret $local_path

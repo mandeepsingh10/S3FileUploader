@@ -23,7 +23,8 @@ Please refer to the detailed step-by-step instructions below for using this repo
 - Place the files you want to upload in the data folder.
 
 5. **Create {env}.vars File** 
-- Depending on the environment you're uploading to (e.g., staging), create a file named {env}.vars in the root directory. For example, if uploading to staging, create staging.vars.
+- Depending on the environment you're uploading to (e.g. dev, staging, sandbox, prod) create a file named {env}.vars in the root directory. For example, if uploading to staging, create staging.vars.
+- Examples are included in the repo, please refer to the examples directory to check the variable names for each environment.
 
 6. **Update {env}.vars File**
 - Edit the {env}.vars file and update the bucket name and S3 upload location with your specific values. Let's say you want to upload files to staging environment.
@@ -54,6 +55,4 @@ Please refer to the detailed step-by-step instructions below for using this repo
 
 - Please be aware that the specified S3UploadLocation—the path to which you intend to upload files from the data directory—will be automatically created in the target bucket if it doesn't already exist. Therefore, it's crucial to thoroughly review and confirm the accuracy of the upload path before proceeding with committing any changes.
 
-## About the Owner
 
-This repository is maintained by Mandeep Singh. If you have any questions, concerns, or suggestions related to this codebase or its usage, please feel free to reach out by opening an issue or contacting me on slack.
