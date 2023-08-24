@@ -5,9 +5,12 @@ on:
   pull_request:
     types:
       - closed
+    branches:
+      - main
 
 jobs:
   CheckPrerequisites:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -129,7 +132,7 @@ jobs:
         
       - name: Upload files to ${{ env.DevS3BucketName }} at location ${{ env.DevS3Path }}
         run: |
-          bash scripts/pipeline/prep.sh "${{ env.DevS3BucketName }}" "${{ env.DevS3Path }}" "${{ secrets.S3FILEUPLOADERBOT_AWS_AK }}" "${{ secrets.S3FILEUPLOADERBOT_AWS_SAK }}" "${{ env.RepoUploadPath }}"
+          bash scripts/prep.sh "${{ env.DevS3BucketName }}" "${{ env.DevS3Path }}" "${{ secrets.S3FILEUPLOADERBOT_AWS_AK }}" "${{ secrets.S3FILEUPLOADERBOT_AWS_SAK }}" "${{ env.RepoUploadPath }}"
 
   StagingUploader:
     runs-on: ubuntu-latest
@@ -150,7 +153,7 @@ jobs:
 
       - name: Upload files to ${{ env.StagingS3BucketName }} at location ${{ env.StagingS3Path }}
         run: |
-            bash scripts/pipeline/prep.sh "${{ env.StagingS3BucketName }}" "${{ env.StagingS3Path }}" "${{ secrets.S3FILEUPLOADERBOT_AWS_AK }}" "${{ secrets.S3FILEUPLOADERBOT_AWS_SAK }}" "${{ env.RepoUploadPath }}"
+          bash scripts/prep.sh "${{ env.StagingS3BucketName }}" "${{ env.StagingS3Path }}" "${{ secrets.S3FILEUPLOADERBOT_AWS_AK }}" "${{ secrets.S3FILEUPLOADERBOT_AWS_SAK }}" "${{ env.RepoUploadPath }}"
 
   SandboxUploader:
     runs-on: ubuntu-latest
@@ -171,7 +174,7 @@ jobs:
 
       - name: Upload files to ${{ env.SandboxS3BucketName }} at location ${{ env.SandboxS3Path }}
         run: |
-          bash scripts/pipeline/prep.sh "${{ env.SandboxS3BucketName }}" "${{ env.SandboxS3Path }}" "${{ secrets.S3FILEUPLOADERBOT_AWS_AK }}" "${{ secrets.S3FILEUPLOADERBOT_AWS_SAK }}" "${{ env.RepoUploadPath }}"
+          bash scripts/prep.sh "${{ env.SandboxS3BucketName }}" "${{ env.SandboxS3Path }}" "${{ secrets.S3FILEUPLOADERBOT_AWS_AK }}" "${{ secrets.S3FILEUPLOADERBOT_AWS_SAK }}" "${{ env.RepoUploadPath }}"
 
   ProdUploader:
     runs-on: ubuntu-latest
@@ -192,4 +195,4 @@ jobs:
 
       - name: Upload files to ${{ env.ProdS3BucketName }} at location ${{ env.ProdS3Path }}
         run: |
-          bash scripts/pipeline/prep.sh "${{ env.ProdS3BucketName }}" "${{ env.ProdS3Path }}" "${{ secrets.S3FILEUPLOADERBOT_AWS_AK }}" "${{ secrets.S3FILEUPLOADERBOT_AWS_SAK }}" "${{ env.RepoUploadPath }}"
+          bash scripts/prep.sh "${{ env.ProdS3BucketName }}" "${{ env.ProdS3Path }}" "${{ secrets.S3FILEUPLOADERBOT_AWS_AK }}" "${{ secrets.S3FILEUPLOADERBOT_AWS_SAK }}" "${{ env.RepoUploadPath }}"
